@@ -55,7 +55,47 @@ else
 fi
 echo "✓ Repo en $WORKDIR"
 
-# 6. Alias `deck` y `deck-preview` en shell rc
+# 6. Instalar deps del MCP server local (dentro del repo clonado)
+echo "▸ Instalando MCP server (goberna-mcp)..."
+(cd "$WORKDIR/mcp-server" && npm install --silent)
+echo "✓ MCP server listo"
+
+# 7. Token de Goberna (para que el MCP pueda llamar a la API)
+TOKEN_DIR="$HOME/.config/goberna"
+TOKEN_FILE="$TOKEN_DIR/token"
+mkdir -p "$TOKEN_DIR"
+chmod 700 "$TOKEN_DIR"
+if [[ ! -f "$TOKEN_FILE" ]]; then
+  echo ""
+  echo "════════════════════════════════════════════════"
+  echo "  TOKEN GOBERNA"
+  echo "════════════════════════════════════════════════"
+  echo ""
+  echo "  Pedile al admin de Goberna que te genere tu token de consultor."
+  echo "  Cuando lo tengas, pegalo acá (vas a verlo escondido — terminá con Enter):"
+  echo ""
+  read -rsp "  Token: " GOBERNA_TOKEN
+  echo ""
+  if [[ -n "$GOBERNA_TOKEN" ]]; then
+    echo "$GOBERNA_TOKEN" > "$TOKEN_FILE"
+    chmod 600 "$TOKEN_FILE"
+    echo "✓ Token guardado en $TOKEN_FILE"
+  else
+    echo "⚠️  Sin token. Vas a poder generar decks pero no listar candidatos hasta que lo pongas."
+    echo "    Cuando lo tengas: echo 'tu-token' > $TOKEN_FILE"
+  fi
+else
+  echo "✓ Token ya existe en $TOKEN_FILE"
+fi
+
+# 8. Registrar MCP server en Claude Code
+echo "▸ Registrando MCP en Claude Code..."
+claude mcp add --scope user goberna node "$WORKDIR/mcp-server/index.mjs" 2>/dev/null || \
+  claude mcp add goberna node "$WORKDIR/mcp-server/index.mjs" 2>/dev/null || \
+  echo "  ⚠️  No pude registrar el MCP automáticamente. Hacelo manual:"
+echo "✓ MCP registrado (verificalo con: claude mcp list)"
+
+# 9. Alias `deck` y `deck-preview` en shell rc
 SHELL_RC="$HOME/.zshrc"
 [[ "$SHELL" == *"bash"* ]] && SHELL_RC="$HOME/.bashrc"
 touch "$SHELL_RC"

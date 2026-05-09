@@ -59,7 +59,51 @@ if (Test-Path (Join-Path $workDir ".git")) {
 }
 Write-Host "✓ Repo en $workDir"
 
-# 6. PowerShell profile: agregar funciones `deck` y `deck-preview`
+# 6. Instalar deps del MCP server local (dentro del repo clonado)
+Write-Host "▸ Instalando MCP server (goberna-mcp)..."
+Push-Location (Join-Path $workDir "mcp-server")
+npm install --silent
+Pop-Location
+Write-Host "✓ MCP server listo"
+
+# 7. Token de Goberna
+$tokenDir = Join-Path $env:USERPROFILE ".config\goberna"
+$tokenFile = Join-Path $tokenDir "token"
+if (-not (Test-Path $tokenDir)) {
+    New-Item -ItemType Directory -Path $tokenDir -Force | Out-Null
+}
+if (-not (Test-Path $tokenFile)) {
+    Write-Host ""
+    Write-Host "════════════════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host "  TOKEN GOBERNA" -ForegroundColor Yellow
+    Write-Host "════════════════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Pedile al admin de Goberna que te genere tu token de consultor."
+    Write-Host "  Cuando lo tengas, pegalo acá:"
+    $secureToken = Read-Host "  Token" -AsSecureString
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
+    $tokenPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    if ($tokenPlain) {
+        Set-Content -Path $tokenFile -Value $tokenPlain -NoNewline
+        Write-Host "✓ Token guardado en $tokenFile"
+    } else {
+        Write-Host "⚠️  Sin token. Cuando lo tengas guardalo en: $tokenFile"
+    }
+} else {
+    Write-Host "✓ Token ya existe en $tokenFile"
+}
+
+# 8. Registrar MCP server en Claude Code
+Write-Host "▸ Registrando MCP en Claude Code..."
+$mcpEntry = Join-Path $workDir "mcp-server\index.mjs"
+try {
+    claude mcp add --scope user goberna node $mcpEntry 2>$null
+    if ($LASTEXITCODE -ne 0) { claude mcp add goberna node $mcpEntry 2>$null }
+} catch {}
+Write-Host "✓ MCP registrado (verificalo con: claude mcp list)"
+
+# 9. PowerShell profile: agregar funciones `deck` y `deck-preview`
 if (-not (Test-Path $PROFILE)) {
     New-Item -ItemType File -Path $PROFILE -Force | Out-Null
 }

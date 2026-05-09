@@ -1,0 +1,15 @@
+{
+  "name": "goberna-mcp",
+  "version": "0.1.0",
+  "description": "MCP server que expone los candidatos del consultor político a Claude Code",
+  "type": "module",
+  "bin": {
+    "goberna-mcp": "./index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
